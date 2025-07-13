@@ -26,7 +26,82 @@ mongo-server/
 - **Puerto MongoDB**: `27017`
 - **Tipo de Despliegue**: Docker Compose
 
-## Configuración e Instalación
+## Instalación de Docker en el Servidor Ubuntu 20.04
+
+### 1. Actualizar el Sistema
+
+```bash
+sudo apt update
+sudo apt upgrade -y
+```
+
+### 2. Instalar Dependencias
+
+```bash
+sudo apt install apt-transport-https ca-certificates curl gnupg lsb-release -y
+```
+
+### 3. Agregar la Clave GPG de Docker
+
+```bash
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+```
+
+### 4. Agregar el Repositorio de Docker
+
+```bash
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+```
+
+### 5. Instalar Docker Engine
+
+```bash
+sudo apt update
+sudo apt install docker-ce docker-ce-cli containerd.io -y
+```
+
+### 6. Instalar Docker Compose
+
+```bash
+# Descargar Docker Compose
+sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+
+# Dar permisos de ejecución
+sudo chmod +x /usr/local/bin/docker-compose
+
+# Crear enlace simbólico (opcional)
+sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
+```
+
+### 7. Configurar Docker para Usuario No Root (Opcional)
+
+```bash
+# Agregar usuario al grupo docker
+sudo usermod -aG docker $USER
+
+# Aplicar cambios (cerrar sesión y volver a iniciar)
+newgrp docker
+```
+
+### 8. Verificar la Instalación
+
+```bash
+# Verificar Docker
+docker --version
+docker run hello-world
+
+# Verificar Docker Compose
+docker-compose --version
+```
+
+### 9. Habilitar Docker al Inicio del Sistema
+
+```bash
+sudo systemctl enable docker
+sudo systemctl start docker
+```
+
+## Configuración e Instalación del Proyecto MongoDB
 
 ### 1. Preparación del Entorno (En el Servidor Ubuntu 20.04)
 
@@ -35,7 +110,33 @@ mkdir -p mongo-server/init
 cd mongo-server
 ```
 
-### 2. Despliegue del Servicio (En el Servidor Ubuntu 20.04)
+### 2. Crear el archivo docker-compose.yml
+
+Crear el archivo `docker-compose.yml` con el siguiente contenido:
+
+```yaml
+version: '3.3'
+
+services:
+  mongodb:
+    image: mongo:4.4
+    container_name: mongodb44
+    restart: always
+    ports:
+      - '192.168.3.100:27017:27017'
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: clave123
+    volumes:
+      - ./data:/data/db
+      - ./init:/docker-entrypoint-initdb.d
+```
+
+### 3. Crear el archivo de inicialización
+
+Crear el archivo `init/init-user.js` con el script de inicialización de usuarios y bases de datos.
+
+### 4. Despliegue del Servicio (En el Servidor Ubuntu 20.04)
 
 Ejecutar el siguiente comando para iniciar MongoDB en modo detached:
 
@@ -43,12 +144,45 @@ Ejecutar el siguiente comando para iniciar MongoDB en modo detached:
 docker-compose up -d
 ```
 
-### 3. Verificación del Servicio (En el Servidor Ubuntu 20.04)
+### 5. Verificación del Servicio (En el Servidor Ubuntu 20.04)
 
 Comprobar que el contenedor esté ejecutándose:
 
 ```bash
 docker-compose ps
+```
+
+## Explicación de la Configuración Docker Compose
+
+### Parámetros del archivo docker-compose.yml
+
+- **version: '3.3'**: Versión del formato de Docker Compose
+- **image: mongo:4.4**: Imagen oficial de MongoDB versión 4.4
+- **container_name: mongodb44**: Nombre del contenedor para fácil identificación
+- **restart: always**: Reiniciar automáticamente el contenedor si se detiene
+- **ports**: Mapeo de puertos desde la IP específica del servidor
+  - `"192.168.3.100:27017:27017"`: Expone MongoDB solo en la IP del servidor
+- **environment**: Variables de entorno para configuración inicial
+  - `MONGO_INITDB_ROOT_USERNAME`: Usuario administrador root
+  - `MONGO_INITDB_ROOT_PASSWORD`: Contraseña del administrador root
+- **volumes**: Montaje de directorios
+  - `./data:/data/db`: Persistencia de datos de MongoDB
+  - `./init:/docker-entrypoint-initdb.d`: Scripts de inicialización
+
+### Comandos de Gestión Adicionales
+
+```bash
+# Ver logs del contenedor en tiempo real
+docker-compose logs -f mongodb
+
+# Entrar al contenedor
+docker exec -it mongodb44 bash
+
+# Verificar estado del contenedor
+docker ps
+
+# Detener y eliminar contenedores y volúmenes
+docker-compose down -v
 ```
 
 ## Conexión a la Base de Datos
@@ -126,13 +260,13 @@ docker-compose down
 
 ```bash
 # Conectar al shell de MongoDB (base de datos admin)
-docker exec -it <container_name> mongosh -u admin -p clave123 --authenticationDatabase admin
+docker exec -it mongodb44 mongosh -u admin -p clave123 --authenticationDatabase admin
 
 # Conectar a la base de datos de pruebas
-docker exec -it <container_name> mongosh -u facci -p facci123 --authenticationDatabase dbprueba
+docker exec -it mongodb44 mongosh -u facci -p facci123 --authenticationDatabase dbprueba
 
 # Conectar sin autenticación (si está habilitado)
-docker exec -it <container_name> mongosh
+docker exec -it mongodb44 mongosh
 ```
 
 ### Conexión desde Aplicaciones Cliente
@@ -166,15 +300,6 @@ const clientPruebas = new MongoClient(
 Para modificar la configuración inicial, edite el archivo `init/init-user.js` antes del primer despliegue.
 
 
-### Actualización (Ejecutar en el Servidor Ubuntu 20.04)
-
-Para actualizar MongoDB, modificar la versión en `docker-compose.yml` y ejecutar:
-
-```bash
-docker-compose pull
-docker-compose up -d
-```
-
 ## Capturas de Pantalla
 
 ### Conexión facci en MongoDB Compass
@@ -189,6 +314,7 @@ docker-compose up -d
 
 | Acción                      | Ubicación de Ejecución                  |
 | --------------------------- | --------------------------------------- |
+| Instalación de Docker       | Servidor Ubuntu 20.04 (`192.168.3.100`) |
 | Despliegue de MongoDB       | Servidor Ubuntu 20.04 (`192.168.3.100`) |
 | Gestión de contenedores     | Servidor Ubuntu 20.04                   |
 | MongoDB Shell               | Servidor Ubuntu 20.04                   |
