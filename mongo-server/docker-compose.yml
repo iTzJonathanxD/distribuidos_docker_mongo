@@ -1,0 +1,15 @@
+version: '3.3'
+
+services:
+  mongodb:
+    image: mongo:4.4
+    container_name: mongodb44
+    restart: always
+    ports:
+      - "192.168.3.100:27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: clave123
+    volumes:
+      - ./data:/data/db
+      - ./init:/docker-entrypoint-initdb.d
