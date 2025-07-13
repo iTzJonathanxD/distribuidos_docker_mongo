@@ -177,7 +177,7 @@ docker-compose up -d
 
 ## Capturas de Pantalla
 
-### Conexión Admin en MongoDB Compass
+### Conexión facci en MongoDB Compass
 
 ![Configuración de conexión para base de datos admin](pruebas/image.png)
 
@@ -194,4 +194,3 @@ docker-compose up -d
 | MongoDB Shell               | Servidor Ubuntu 20.04                   |
 | MongoDB Compass             | Equipo Cliente                          |
 | Aplicaciones Python/Node.js | Equipo Cliente                          |
-| Respaldos y mantenimiento   | Servidor Ubuntu 20.04                   |
